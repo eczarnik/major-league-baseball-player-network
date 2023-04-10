@@ -49,7 +49,25 @@ def map_player_to_id(people):
 
 def make_graph(appearances):
     '''
+    """
+    Builds an undirected graph of players and teams based on the given list of
+    appearances, where each appearance is a dictionary with keys 'playerID' and
+    'teamID'. The resulting graph has a vertex for each unique player and team
+    ID, and an edge between a player and a team if the player appeared for that
+    team, and vice versa.
 
+    Parameters
+    ----------
+    appearances: list
+        A list of dictionaries representing player appearances,
+        where each dictionary has keys 'playerID' and 'teamID'
+
+    Returns
+    -------
+    gr: Graph
+        An undirected graph representing the player and team relationships
+        based on the given appearances. The graph is implemented using the
+        Graph class from the graph.py module
     '''
     gr = Graph() # initialize empty graph
     for item in appearances:
