@@ -135,15 +135,15 @@ def main():
     teams = read_csv_file('Teams.csv')
 
     #  map players to their playerID
-    players_and_id = map_player_to_id(people)
+    if os.path.exists('players_and_id'):
+        with open('players_and_id', 'rb') as f:
+            players_and_id = pickle.load(f) # loading the cached players_and_id mapped data
+    else:
+        players_and_id = map_player_to_id(people)
+        with open('players_and_id', 'wb') as f:
+            pickle.dump(players_and_id, f) # caching the players_and_id mapping data
 
-    # if os.path.exists('graph.pl'):
-    #     with open('graph.pl', 'rb') as f:
-    #         gr = pickle.load(f)
-    # else:
     gr = make_graph(appearances)
-        # with open('graph.pl', 'wb'):
-        #     pickle.dump(gr, f)
 
     # initial prompt for user input
     start_prompt = "Enter the first and last name of a player in the following format: '<Firstname> <Lastname>', or 'exit' to quit: "
@@ -157,13 +157,18 @@ def main():
 
     # build bfs graph; the graph will be built off of the starting input player name provided by the user
     # first we need to grab the start_input's (player's) playerID because the network is built off of playerID entries
-    if len(players_and_id[start_input]) > 1:
+    if len(players_and_id[start_input]) > 1: # are there duplicate players with the same name?
+        print(f'More than one {start_input} has been found.')
+        idx = 1
         for item in players_and_id[start_input]:
-            print(f'More than one {start_input} has been found.') # need to show all options for duplicate players, ask user which one they want; do this for end input
-            print(item[1])
-        player_id = players_and_id[start_input][1][0]
-    elif len(players_and_id[start_input]) == 1:
-        player_id = players_and_id[start_input][0][0]
+            print(f'{idx}: {start_input} born in {item[1]}') # print all the duplicate player names and their birth years
+            idx += 1
+        birth_year_input = get_user_input(f'Please select the birth year for the {start_input} you want: ') # user selects which player they want based on birth year
+        while int(birth_year_input) < 1 or int(birth_year_input) > (idx - 1):
+            birth_year_input = get_user_input(f'Please select the birth year for the {start_input} you want: ')
+        player_id = players_and_id[start_input][int(birth_year_input) - 1][0]
+    elif len(players_and_id[start_input]) == 1: # if no duplicate players
+        player_id = players_and_id[start_input][0][0] # use the playerid to build the graph
     start_vertex = gr.getVertex(player_id)
     bfs(gr, start_vertex)
 
