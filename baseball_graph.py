@@ -21,7 +21,7 @@ def read_csv_file(filepath):
             data.append(row)
     return data
 
-def map_player_to_id(people):
+def map_player_to_id(people, appearances):
     '''
     Maps a list of dictionaries representing baseball players to a dictionary
     that associates each player's full name with a list of tuples containing
@@ -30,7 +30,7 @@ def map_player_to_id(people):
     Parameters
     ----------
     people: list
-        A list of player statistics
+        A list of players
 
     Returns
     -------
@@ -41,11 +41,59 @@ def map_player_to_id(people):
     '''
     player_name_to_id = {}
     for person in people:
+        has_appearance = False
+        for appearance in appearances:
+            if appearance['playerID'] == person['playerID']:
+                has_appearance = True
+                break
+        if not has_appearance:
+            continue
         player_name = person['nameFirst'].strip() + ' ' + person['nameLast'].strip()
         if player_name not in player_name_to_id:
             player_name_to_id[player_name] = []
         player_name_to_id[player_name].append((person['playerID'], person['birthYear']))
     return player_name_to_id
+
+def map_playerid_to_name(people):
+    '''
+    Maps a list of dictionaries representing playerID's to a dictionary that associates
+    each playerID to a player's first name and last name.
+
+    Parameters
+    ----------
+    people: list
+        A list of players
+
+    Returns
+    -------
+    playerid_to_name: dict
+        A dictionary that maps playerID's to player names
+    '''
+    playerid_to_name = {}
+    for person in people:
+        playerid_to_name[person['playerID']] = person['nameFirst'].strip() + ' ' + person['nameLast'].strip()
+    return playerid_to_name
+
+def map_teamid_to_name(teams):
+    '''
+    Maps a list of dictionaries representing teamID's to a dictionary that associates
+    each teamID to the full team name.
+
+    Parameters
+    ----------
+    teams: list
+        A list of teams
+
+    Returns
+    -------
+    teamid_to_name: dict
+        A dictionary that maps teamID's to team names
+
+    '''
+    teamid_to_name = {}
+    for team in teams:
+        teamid_to_name[team['teamID']] = team['name']
+    return teamid_to_name
 
 def make_graph(appearances):
     '''
@@ -71,10 +119,11 @@ def make_graph(appearances):
     '''
     gr = Graph() # initialize empty graph
     for item in appearances:
-        gr.addEdge(item['playerID'], item['teamID'])
-        gr.addEdge(item['teamID'], item['playerID'])
+        team_node = (item['teamID'], item['yearID'])
+        gr.addEdge(item['playerID'], team_node)
+        gr.addEdge(team_node, item['playerID'])
         gr.getVertex(item['playerID']).setColor('white')
-        gr.getVertex(item['teamID']).setColor('white')
+        gr.getVertex(team_node).setColor('white')
     return gr
 
 
@@ -127,6 +176,34 @@ def traverse(y):
     path.append(x.getId())
     return path
 
+def format_path(path, playerid_to_name, teamid_to_name):
+    '''
+    Format final path.
+
+    Parameters
+    ----------
+    path: list
+        Player to team path to be formatted
+    playerid_to_name: dict
+        Mapping of playerID to player first name and player last name
+    teamid_to_name: dict
+        Mapping of teamID to team name
+
+    Returns
+    -------
+    new_path: list
+        Formatted player to team path
+    '''
+    new_path = []
+    for i in range(len(path)):
+        if i % 2 == 0:
+            player_name = playerid_to_name[path[i]]
+            new_path.append(player_name)
+        else:
+            team_name = f"{teamid_to_name[path[i][0]]}, {path[i][1]}"
+            new_path.append(team_name)
+    return new_path
+
 def get_user_input(prompt):
     '''
     Prompts user for input.
@@ -161,6 +238,9 @@ def main():
         with open('players_and_id', 'wb') as f:
             pickle.dump(players_and_id, f) # caching the players_and_id mapping data
 
+    player_names = map_playerid_to_name(people)
+    team_names = map_teamid_to_name(teams)
+
     gr = make_graph(appearances)
 
     # initial prompt for user input
@@ -190,27 +270,30 @@ def main():
     start_vertex = gr.getVertex(player_id)
     bfs(gr, start_vertex)
 
-    # get second player name from user
+    # second player input loop
     end_prompt = "Enter the first and last name of another player in the following format: '<Firstname> <Lastname>', or 'exit' to quit: "
     end_input = get_user_input(end_prompt)
-    while end_input not in players_and_id.keys() and end_input != 'exit':
-        print('Invalid player name.')
-        end_input = get_user_input(end_prompt)
-    if end_input == 'exit':
-        print('Bye')
-        exit(0)
-
-    # input loop
     while end_input != 'exit':
         if end_input in players_and_id.keys():
-            player_id = players_and_id[end_input][0][0]
-        end_vertex = gr.getVertex(player_id)
-        path = traverse(end_vertex)
-        print(path)
-        end_input = get_user_input(end_prompt)
-        while end_input not in players_and_id.keys() and end_input != 'exit':
+            if len(players_and_id[end_input]) > 1: # are there duplicate players with the same name?
+                print(f'More than one {end_input} has been found.')
+                idx = 1
+                for item in players_and_id[end_input]:
+                    print(f'{idx}: {end_input} born in {item[1]}') # print all the duplicate player names and their birth years
+                    idx += 1
+                birth_year_input = get_user_input(f'Please select the birth year for the {end_input} you want: ') # user selects which player they want based on birth year
+                while int(birth_year_input) < 1 or int(birth_year_input) > (idx - 1):
+                    birth_year_input = get_user_input(f'Please select the birth year for the {end_input} you want: ')
+                player_id = players_and_id[end_input][int(birth_year_input) - 1][0]
+            elif len(players_and_id[end_input]) == 1: # if no duplicate players
+                player_id = players_and_id[end_input][0][0] # use the playerid to build the graph
+            end_vertex = gr.getVertex(player_id)
+            path = traverse(end_vertex)
+            # print(path)
+            print(format_path(path, player_names, team_names))
+        else:
             print('Invalid player name.')
-            end_input = get_user_input(end_prompt)
+        end_input = get_user_input(end_prompt)
     print('Bye')
 
 if __name__ == "__main__":
