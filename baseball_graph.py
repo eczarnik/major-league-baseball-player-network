@@ -1,9 +1,14 @@
 import csv
+import json
+import math
+import matplotlib.pyplot as plt
+import networkx as nx
 import os
 import pickle
-from pythonds import Graph, Vertex
 from pythonds.basic import Queue
 import pprint as pp
+import webbrowser as wb
+import generate_baseball_graph
 
 def read_csv_file(filepath):
     '''
@@ -117,17 +122,16 @@ def make_graph(appearances):
         based on the given appearances. The graph is implemented using the
         Graph class from the graph.py module
     '''
-    gr = Graph() # initialize empty graph
+    gr = nx.Graph() # initialize empty graph
     for item in appearances:
         team_node = (item['teamID'], item['yearID'])
-        gr.addEdge(item['playerID'], team_node)
-        gr.addEdge(team_node, item['playerID'])
-        gr.getVertex(item['playerID']).setColor('white')
-        gr.getVertex(team_node).setColor('white')
+        gr.add_edge(item['playerID'], team_node)
+        gr.add_edge(team_node, item['playerID'])
+        nx.set_node_attributes(gr, {item['playerID']: {'color': 'white', 'distance': 0, 'pred': None}, team_node: {'color': 'white', 'distance': 0, 'pred': None}}) # set the nodes to white
     return gr
 
 
-def bfs(gr: Graph, start: Vertex):
+def bfs(gr, start):
     '''
     Performs breadth first search and modifies
     Graph object in place.
@@ -140,21 +144,22 @@ def bfs(gr: Graph, start: Vertex):
     start: Vertex
       Starting vertex for breadth first search
     '''
-    start.setDistance(0)
-    start.setPred(None)
+
+    gr.nodes[start]['distance'] = 0
+    gr.nodes[start]['pred'] = None
     vertQueue = Queue()
     vertQueue.enqueue(start)
     while (vertQueue.size() > 0):
         currentVert = vertQueue.dequeue()
-        for nbr in currentVert.getConnections():
-            if (nbr.getColor() == 'white'):
-                nbr.setColor('gray')
-                nbr.setDistance(currentVert.getDistance() + 1)
-                nbr.setPred(currentVert)
+        for nbr in gr.neighbors(currentVert):
+            if gr.nodes[nbr]['color'] == 'white':
+                gr.nodes[nbr]['color'] = 'gray'
+                gr.nodes[nbr]['distance'] = gr.nodes[currentVert]['distance'] + 1
+                gr.nodes[nbr]['pred'] = currentVert
                 vertQueue.enqueue(nbr)
-        currentVert.setColor('black')
+        gr.nodes[currentVert]['color'] = 'black'
 
-def traverse(y):
+def traverse(gr, y):
     '''
     Performs traversal from y to previously defined start position (x).
 
@@ -170,10 +175,10 @@ def traverse(y):
     '''
     path = []
     x = y
-    while (x.getPred()):
-        path.append(x.getId())
-        x = x.getPred()
-    path.append(x.getId())
+    while gr.nodes[x]['pred']:
+        path.append(x)
+        x = gr.nodes[x]['pred']
+    path.append(x)
     return path
 
 def format_path(path, playerid_to_name, teamid_to_name):
@@ -225,9 +230,9 @@ def main():
     Driver function for program.
     '''
 
-    appearances = read_csv_file('Appearances.csv')
-    people = read_csv_file('People.csv')
-    teams = read_csv_file('Teams.csv')
+    appearances = read_csv_file('data/Appearances.csv')
+    people = read_csv_file('data/People.csv')
+    teams = read_csv_file('data/Teams.csv')
 
     #  map players to their playerID
     if os.path.exists('players_and_id'):
@@ -241,7 +246,16 @@ def main():
     player_names = map_playerid_to_name(people)
     team_names = map_teamid_to_name(teams)
 
-    gr = make_graph(appearances)
+    # graph cache $$
+    if os.path.exists('baseball_graph.json'):
+        with open('baseball_graph.json', 'r') as f:
+            res = json.load(f)
+            gr = nx.node_link.node_link_graph(res)
+    else:
+        gr = make_graph(appearances)
+        res = nx.node_link.node_link_data(gr)
+        with open('baseball_graph.json', 'w') as f:
+            json.dump(res, f)
 
     # initial prompt for user input
     start_prompt = "Enter the first and last name of a player in the following format: '<Firstname> <Lastname>', or 'exit' to quit: "
@@ -267,7 +281,7 @@ def main():
         player_id = players_and_id[start_input][int(birth_year_input) - 1][0]
     elif len(players_and_id[start_input]) == 1: # if no duplicate players
         player_id = players_and_id[start_input][0][0] # use the playerid to build the graph
-    start_vertex = gr.getVertex(player_id)
+    start_vertex = player_id
     bfs(gr, start_vertex)
 
     # second player input loop
@@ -287,10 +301,15 @@ def main():
                 player_id = players_and_id[end_input][int(birth_year_input) - 1][0]
             elif len(players_and_id[end_input]) == 1: # if no duplicate players
                 player_id = players_and_id[end_input][0][0] # use the playerid to build the graph
-            end_vertex = gr.getVertex(player_id)
-            path = traverse(end_vertex)
-            # print(path)
+            end_vertex = player_id
+            path = traverse(gr, end_vertex)
             print(format_path(path, player_names, team_names))
+            for i in range(len(path)):
+                if i % 2 == 0:
+                    print(f'{i//2 + 1}. {player_names[path[i]]}')
+            bio_input = get_user_input(f'Please select the number of a player you would like more information on: ')
+            bio_input = path[(int(bio_input)-1) * 2] # player id from path
+            wb.open(f'https://www.baseball-reference.com/players/{bio_input[0]}/{bio_input}.shtml')
         else:
             print('Invalid player name.')
         end_input = get_user_input(end_prompt)
