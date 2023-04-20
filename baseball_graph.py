@@ -178,7 +178,19 @@ def get_user_input(prompt):
 
 def get_playerid_from_playername(players_and_id, player_name):
     '''
+    Given a dictionary containing players and their ids, and a player name, returns the player id.
+
+    Parameters
+    ----------
+    players_and_id: dict
+        A dictionary containing players and their ids. Keys are player names and values are a list of tuples, where each tuple contains the player id and birth year.
+    player_name: str
+        The name of the player to search for
     
+    Returns
+    -------
+    player_id: str
+       The id of the player
     '''
 
     if len(players_and_id[player_name]) > 1:
