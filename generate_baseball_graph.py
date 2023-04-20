@@ -46,7 +46,7 @@ def make_graph(appearances):
         team_node = (item['teamID'], item['yearID'])
         gr.add_edge(item['playerID'], team_node)
         gr.add_edge(team_node, item['playerID'])
-        nx.set_node_attributes(gr, {item['playerID']: {'color': 'white', 'distance': 0, 'pred': None}, team_node: {'color': 'white', 'distance': 0, 'pred': None}}) # set the nodes to white
+        nx.set_node_attributes(gr, {item['playerID']: {'color': 'white', 'distance': float('inf'), 'pred': None}, team_node: {'color': 'white', 'distance': float('inf'), 'pred': None}}) # set the nodes to white
     return gr
 
 if __name__ == '__main__':
