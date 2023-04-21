@@ -19,6 +19,9 @@ def map_player_to_id(people, appearances):
     people: list
         A list of players
 
+    appearances: list
+        A list of player appearances
+
     Returns
     -------
     player_name_to_id: dict
@@ -35,11 +38,14 @@ def map_player_to_id(people, appearances):
                 break
         if not has_appearance:
             continue
-        player_name = person['nameFirst'].strip() + ' ' + person['nameLast'].strip()
+        player_name = person['nameFirst'].strip() + ' ' + \
+            person['nameLast'].strip()
         if player_name not in player_name_to_id:
             player_name_to_id[player_name] = []
-        player_name_to_id[player_name].append((person['playerID'], person['birthYear']))
+        player_name_to_id[player_name].append(
+            (person['playerID'], person['birthYear']))
     return player_name_to_id
+
 
 def map_playerid_to_name(people):
     '''
@@ -58,8 +64,10 @@ def map_playerid_to_name(people):
     '''
     playerid_to_name = {}
     for person in people:
-        playerid_to_name[person['playerID']] = person['nameFirst'].strip() + ' ' + person['nameLast'].strip()
+        playerid_to_name[person['playerID']] = person['nameFirst'].strip(
+        ) + ' ' + person['nameLast'].strip()
     return playerid_to_name
+
 
 def map_teamid_to_name(teams):
     '''
@@ -74,13 +82,14 @@ def map_teamid_to_name(teams):
     Returns
     -------
     teamid_to_name: dict
-        A dictionary that maps teamID's to team names
+        A dictionary that maps teamID's to full team names
 
     '''
     teamid_to_name = {}
     for team in teams:
         teamid_to_name[team['teamID']] = team['name']
     return teamid_to_name
+
 
 def bfs(gr, start):
     '''
@@ -110,12 +119,15 @@ def bfs(gr, start):
                 vertQueue.enqueue(nbr)
         gr.nodes[currentVert]['color'] = 'black'
 
+
 def traverse(gr, y):
     '''
     Performs traversal from y to previously defined start position (x).
 
     Parameters
     ----------
+    gr: Graph
+        Graph object representation of players (playerID) and the teams (teamID) they played for
     y: Vertex
         End vertex
 
@@ -132,18 +144,19 @@ def traverse(gr, y):
     path.append(x)
     return path
 
+
 def format_path(path, playerid_to_name, teamid_to_name):
     '''
-    Format final path.
+    Format final path of player ids and team ids to player names and the full team name they played for.
 
     Parameters
     ----------
     path: list
         Player to team path to be formatted
     playerid_to_name: dict
-        Mapping of playerID to player first name and player last name
+        Mapping of playerID to player first name and last name
     teamid_to_name: dict
-        Mapping of teamID to team name
+        Mapping of teamID to full team name
 
     Returns
     -------
@@ -159,6 +172,7 @@ def format_path(path, playerid_to_name, teamid_to_name):
             team_name = f"{teamid_to_name[path[i][0]]}, {path[i][1]}"
             new_path.append(team_name)
     return new_path
+
 
 def get_user_input(prompt):
     '''
@@ -176,6 +190,7 @@ def get_user_input(prompt):
     '''
     return input(prompt)
 
+
 def get_playerid_from_playername(players_and_id, player_name):
     '''
     Given a dictionary containing players and their ids, and a player name, returns the player id.
@@ -183,29 +198,37 @@ def get_playerid_from_playername(players_and_id, player_name):
     Parameters
     ----------
     players_and_id: dict
-        A dictionary containing players and their ids. Keys are player names and values are a list of tuples, where each tuple contains the player id and birth year.
+        A dictionary containing players and their ids. Keys are player names and values are a list of
+        tuples, where each tuple contains the player id and birth year
     player_name: str
         The name of the player to search for
-    
+
     Returns
     -------
     player_id: str
        The id of the player
     '''
 
+    # check if there are multiple players with the same name (e.g., Bob Allen)
     if len(players_and_id[player_name]) > 1:
         print(f'More than one {player_name} has been found.')
         idx = 1
         for item in players_and_id[player_name]:
-            print(f'{idx}: {player_name} born in {item[1]}') # print all the duplicate player names and their birth years
+            # print all the duplicate player names and their birth years
+            print(f'{idx}: {player_name} born in {item[1]}')
             idx += 1
-        birth_year_input = get_user_input(f'Please select the birth year for the {player_name} you want: ') # user selects which player they want based on birth year
+        # user selects which player they want based on birth year
+        birth_year_input = get_user_input(
+            f'Please select the birth year for the {player_name} you want: ')
         while int(birth_year_input) < 1 or int(birth_year_input) > (idx - 1):
-            birth_year_input = get_user_input(f'Please select the birth year for the {player_name} you want: ')
+            birth_year_input = get_user_input(
+                f'Please select the birth year for the {player_name} you want: ')
         player_id = players_and_id[player_name][int(birth_year_input) - 1][0]
-    elif len(players_and_id[player_name]) == 1: # if no duplicate players
-        player_id = players_and_id[player_name][0][0] # use the playerid to build the graph
+    # if no duplicate players, use the playerid to build the graph
+    elif len(players_and_id[player_name]) == 1:
+        player_id = players_and_id[player_name][0][0]
     return player_id
+
 
 def main():
     '''
@@ -219,16 +242,16 @@ def main():
     #  map players to their playerID
     if os.path.exists('players_and_id'):
         with open('players_and_id', 'rb') as f:
-            players_and_id = pickle.load(f) # loading the cached players_and_id mapped data
+            players_and_id = pickle.load(f)
     else:
         players_and_id = map_player_to_id(people)
         with open('players_and_id', 'wb') as f:
-            pickle.dump(players_and_id, f) # caching the players_and_id mapping data
+            pickle.dump(players_and_id, f)
 
     player_names = map_playerid_to_name(people)
     team_names = map_teamid_to_name(teams)
 
-    # graph cache $$
+    # cache graph
     if os.path.exists('baseball_graph.json'):
         with open('baseball_graph.json', 'r') as f:
             res = json.load(f)
@@ -249,13 +272,15 @@ def main():
         print('Bye')
         exit(0)
 
-    # build bfs graph; the graph will be built off of the starting input player name provided by the user
-    # first we need to grab the start_input's (player's) playerID because the network is built off of playerID entries
+    # build bfs graph; the graph will be built off of the starting input
+    # player name provided by the user
     start_vertex = get_playerid_from_playername(players_and_id, start_input)
     bfs(gr, start_vertex)
 
-    # display subset of graph
-    subgraph = nx.graphviews.subgraph_view(gr, lambda node: gr.nodes[node]['distance'] < 3) # teams and players the starting player played with (1 degree)
+    # display subset of graph to show teams and players that starting player
+    # played with (first-degree connections only)
+    subgraph = nx.graphviews.subgraph_view(
+        gr, lambda node: gr.nodes[node]['distance'] < 3)
     nx.drawing.draw(subgraph, with_labels=True)
     plt.show()
 
@@ -264,41 +289,55 @@ def main():
     end_input = get_user_input(end_prompt)
     while end_input != 'exit':
         if end_input in players_and_id.keys():
-            end_vertex = get_playerid_from_playername(players_and_id, end_input)
+            end_vertex = get_playerid_from_playername(
+                players_and_id, end_input)
             path = traverse(gr, end_vertex)
 
-            # create a subgraph that includes the path and its first-degree connections
+            # create a subgraph that includes the path and its first-degree
+            # connections
             nodes_to_include = set(path)
             for node in path:
                 nodes_to_include.update(list(gr.neighbors(node)))
             subgraph = gr.subgraph(nodes_to_include)
-            # set the color of nodes in the path to hotpink and all other nodes to dodger blue
-            node_colors = ['hotpink' if node in path else 'dodgerblue' for node in subgraph.nodes]
-
-            pos = nx.kamada_kawai_layout(subgraph) # compute the positions of the nodes using the kamada kawai algorithm
+            # set the color of nodes in the path to hotpink and all other nodes
+            # to dodger blue
+            node_colors = [
+                'hotpink' if node in path else 'dodgerblue' for node in subgraph.nodes]
+            # compute the positions of the nodes using the kamada kawai
+            # algorithm
+            pos = nx.kamada_kawai_layout(subgraph)
 
             # plot the subgraph with the path and its nodes highlighted
             nx.draw_networkx_nodes(subgraph, pos, node_color=node_colors)
             nx.draw_networkx_edges(subgraph, pos)
-            nx.draw_networkx_edges(subgraph, pos, edgelist=[(path[i],path[i+1]) for i in range(len(path)-1)], edge_color='r', width=3)
+            nx.draw_networkx_edges(subgraph, pos, edgelist=[(
+                path[i], path[i + 1]) for i in range(len(path) - 1)], edge_color='r', width=3)
             nx.draw_networkx_labels(subgraph, pos)
             plt.axis('off')
             plt.show()
 
+            # display path between player one and player two
             print(format_path(path, player_names, team_names))
+
+            # baseball-reference.com player bios IO loop
             for i in range(len(path)):
                 if i % 2 == 0:
                     print(f'{i//2 + 1}. {player_names[path[i]]}')
-            bio_input = get_user_input(f'Please select the number of a player you would like more information, or \'N\' to continue: ')
+            bio_input = get_user_input(
+                f'Please select the number of a player you would like more information, or \'N\' to continue: ')
             while not str.isdigit(bio_input) and bio_input != 'N':
-                bio_input = get_user_input(f'Please select the number of a player you would like more information, or \'N\' to continue: ')
+                bio_input = get_user_input(
+                    f'Please select the number of a player you would like more information, or \'N\' to continue: ')
             if bio_input != 'N':
-                bio_input = path[(int(bio_input)-1) * 2] # player id from path
-                wb.open(f'https://www.baseball-reference.com/players/{bio_input[0]}/{bio_input}.shtml')
+                # player id from path
+                bio_input = path[(int(bio_input) - 1) * 2]
+                wb.open(
+                    f'https://www.baseball-reference.com/players/{bio_input[0]}/{bio_input}.shtml')
         else:
             print('Invalid player name.')
         end_input = get_user_input(end_prompt)
     print('Good Bye!')
+
 
 if __name__ == "__main__":
     main()
