@@ -53,5 +53,5 @@ Good Bye!
 ### Christian Yelich Subgraph
 ![Christian Yelich Subgraph](images/cyelich_subgraph.png)
 
-### Christian Yelich to Nick Allen Graph
+### Christian Yelich to Nick Allen (1998) Graph
 ![Christian Yelich to Nick Allen Graph](images/yelich_to_allen_graph.png)
