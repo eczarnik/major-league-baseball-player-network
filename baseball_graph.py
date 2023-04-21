@@ -219,10 +219,10 @@ def get_playerid_from_playername(players_and_id, player_name):
             idx += 1
         # user selects which player they want based on birth year
         birth_year_input = get_user_input(
-            f'Please select the birth year for the {player_name} you want: ')
+            f'Please select the {player_name} you want: ')
         while int(birth_year_input) < 1 or int(birth_year_input) > (idx - 1):
             birth_year_input = get_user_input(
-                f'Please select the birth year for the {player_name} you want: ')
+                f'Please select the {player_name} you want: ')
         player_id = players_and_id[player_name][int(birth_year_input) - 1][0]
     # if no duplicate players, use the playerid to build the graph
     elif len(players_and_id[player_name]) == 1:
